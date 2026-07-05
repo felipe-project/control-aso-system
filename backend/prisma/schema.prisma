@@ -1,0 +1,105 @@
+// Schema do banco de dados - Sistema de Controle de ASO
+// Documentação: https://www.prisma.io/docs
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Usuário do RH que acessa o sistema
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String   // sempre armazenada com hash (bcrypt), nunca em texto puro
+  role      String   @default("RH")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+// Funcionário do hospital e seu ASO
+model Employee {
+  id             String    @id @default(uuid())
+  name           String
+  cpf            String    @unique
+  role           String    // cargo/função (ex: Enfermeiro, Técnico de Enfermagem)
+  department     String    // setor (ex: UTI, Pronto Socorro)
+  email          String?
+  phone          String?
+  admissionDate  DateTime?
+
+  asoIssueDate   DateTime  // data de emissão do ASO
+  asoExpiryDate  DateTime  // data de vencimento do ASO (padrão: emissão + 1 ano)
+
+  active         Boolean   @default(true)
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  alertSetting   AlertSetting?
+  notifications  Notification[]
+
+  @@map("employees")
+  @@index([asoExpiryDate])
+}
+
+// Configuração de quando avisar antes do vencimento.
+// Se employeeId for nulo, é a configuração global (padrão do sistema).
+// Se um funcionário tiver uma linha própria, ela sobrescreve o padrão global.
+model AlertSetting {
+  id         String    @id @default(uuid())
+  employeeId String?   @unique
+  employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  value      Int       // quantidade (ex: 1, 2, 30)
+  unit       AlertUnit // dias, semanas ou meses
+
+  updatedAt  DateTime  @updatedAt
+
+  @@map("alert_settings")
+}
+
+enum AlertUnit {
+  DAYS
+  WEEKS
+  MONTHS
+}
+
+// Configuração do serviço de e-mail (SMTP) - normalmente uma única linha na tabela
+model EmailConfig {
+  id         String   @id @default(uuid())
+  smtpHost   String
+  smtpPort   Int
+  smtpUser   String
+  smtpPass   String   // idealmente uma senha de app, nunca a senha principal do e-mail
+  smtpSecure Boolean  @default(true)
+
+  fromName   String   @default("Sistema de Controle de ASO")
+  fromEmail  String
+
+  // e-mail(s) que recebem os alertas do RH, separados por vírgula
+  notifyEmails String
+
+  updatedAt  DateTime @updatedAt
+
+  @@map("email_config")
+}
+
+// Histórico de notificações já enviadas, para evitar envio duplicado no mesmo ciclo
+model Notification {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  asoExpiryDateSnapshot DateTime // guarda a data de vencimento no momento do envio
+  sentAt     DateTime @default(now())
+
+  @@map("notifications")
+  @@index([employeeId, asoExpiryDateSnapshot])
+}

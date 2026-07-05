@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: aso_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aso_user
+      POSTGRES_PASSWORD: aso_password
+      POSTGRES_DB: aso_control
+    ports:
+      - '5432:5432'
+    volumes:
+      - aso_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  aso_postgres_data:
