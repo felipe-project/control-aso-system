@@ -6,10 +6,11 @@ const authRoutes = require('./routes/authRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const cronRoutes = require('./routes/cronRoutes');
+const setupRoutes = require('./routes/setupRoutes');
 
 const app = express();
 
-// Segurança: define headers HTTP recomendados (proteção contra alguns ataques comuns)
+// Segurança: define headers HTTP recomendados (proteção contra alguns ataques comuns).
 app.use(helmet());
 
 // Libera CORS apenas para o domínio do frontend configurado no .env
@@ -26,6 +27,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/cron', cronRoutes);
+app.use('/api/setup', setupRoutes);
 
 // Handler central de erros não tratados.
 // Sempre loga o erro completo no servidor, mas só devolve detalhes técnicos
